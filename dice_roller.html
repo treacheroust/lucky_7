@@ -30,7 +30,8 @@
       box-shadow: 0 18px 50px rgb(0 0 0 / 35%);
     }
     h1 { margin: 0 0 6px; font-size: 1.65rem; }
-    .hint { margin: 0 0 22px; color: #cbd5e1; }
+    .hint { margin: 0 0 10px; color: #cbd5e1; }
+    .helper { margin: 0 0 22px; color: #fbbf24; font-weight: 700; }
     .inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
     label { color: #cbd5e1; font-weight: 650; }
     input {
@@ -132,16 +133,8 @@
       background: #151f31;
     }
     .attempt-total { margin: 0 0 8px; color: #cbd5e1; font-weight: 700; }
-    .group-title { margin: 0; color: #94a3b8; font-size: .78rem; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
-    .attempt-details ol { margin-top: 6px; }
-    .attempt-details li { line-height: 1.45; }
-    .attempt-details li::marker { color: #64748b; }
-    .kept {
-      color: white;
-      font-weight: 750;
-    }
-    ol { padding-left: 30px; margin-bottom: 0; }
-    li { padding: 6px 0; color: #cbd5e1; }
+    .roll-detail { margin: 7px 0 0; color: #cbd5e1; line-height: 1.45; overflow-wrap: anywhere; }
+    .detail-label { color: #94a3b8; font-weight: 800; }
     [hidden] { display: none; }
     @media (max-width: 600px) {
       main { padding: 18px; }
@@ -158,17 +151,18 @@
 <body>
   <main>
     <h1>Bobblehead Dice Roller</h1>
-    <p class="hint">Roll each group of d6s and keep its highest die.</p>
+    <p class="hint">Roll the combined dice, ignore the lowest dice, and count 6s.</p>
+    <p id="rollHelper" class="helper" aria-live="polite"></p>
 
     <form id="roller">
       <div class="inputs">
         <label>
-          Dice per group
-          <input id="extraDice" name="extraDice" type="number" min="1" max="1000" value="2" required inputmode="numeric">
+          Bobbleheads
+          <input id="bobbleheads" name="bobbleheads" type="number" min="1" max="1000" value="5" required inputmode="numeric">
         </label>
         <label>
-          Bobbleheads (groups)
-          <input id="bobbleheads" name="bobbleheads" type="number" min="1" max="1000" value="5" required inputmode="numeric">
+          Barbarian Classes
+          <input id="classes" name="classes" type="number" min="0" max="1000" value="1" required inputmode="numeric">
         </label>
       </div>
       <button type="submit">Roll dice</button>
@@ -179,7 +173,7 @@
       <div class="attempt-table">
         <div class="attempt-header" aria-hidden="true">
           <span>Try</span>
-          <span>Kept dice</span>
+          <span>Retained dice</span>
           <span>Sixes</span>
           <span>Result</span>
         </div>
@@ -192,28 +186,41 @@
     const form = document.querySelector("#roller");
     const results = document.querySelector("#results");
     const attempts = document.querySelector("#attempts");
+    const helper = document.querySelector("#rollHelper");
     let attemptNumber = 0;
 
     function rollD6() {
       return Math.floor(Math.random() * 6) + 1;
     }
 
+    function updateHelper() {
+      const bobbleheads = Number(form.elements.bobbleheads.value) || 0;
+      const classes = Number(form.elements.classes.value) || 0;
+      const dice = Math.max(0, bobbleheads) + Math.max(0, classes);
+      const diceLabel = dice === 1 ? "die" : "dice";
+      const ignoreLabel = classes === 0
+        ? "ignore none"
+        : classes === 1
+          ? "ignore the lowest 1 die"
+          : `ignore the lowest ${classes} dice`;
+      helper.textContent = `Roll ${dice} ${diceLabel}, ${ignoreLabel}, and count 6s.`;
+    }
+
+    form.addEventListener("input", updateHelper);
+    updateHelper();
+
     form.addEventListener("submit", (event) => {
       event.preventDefault();
       if (!form.reportValidity()) return;
 
-      const extraDice = Number(form.elements.extraDice.value);
       const bobbleheads = Number(form.elements.bobbleheads.value);
-      const groups = [];
-      const kept = [];
+      const classes = Number(form.elements.classes.value);
+      const completeRoll = Array.from({ length: bobbleheads + classes }, rollD6);
+      const sortedRoll = [...completeRoll].sort((a, b) => a - b);
+      const ignored = sortedRoll.slice(0, classes);
+      const retained = sortedRoll.slice(classes);
 
-      for (let groupNumber = 0; groupNumber < bobbleheads; groupNumber += 1) {
-        const rolls = Array.from({ length: extraDice }, rollD6);
-        groups.push(rolls);
-        kept.push(Math.max(...rolls));
-      }
-
-      const numberOfSixes = kept.filter((roll) => roll === 6).length;
+      const numberOfSixes = retained.filter((roll) => roll === 6).length;
       attemptNumber += 1;
 
       const attempt = document.createElement("details");
@@ -226,8 +233,8 @@
 
       const diceRow = document.createElement("span");
       diceRow.className = "dice-row";
-      diceRow.textContent = kept.join(", ");
-      diceRow.setAttribute("aria-label", `Kept dice: ${kept.join(", ")}`);
+      diceRow.textContent = retained.join(", ");
+      diceRow.setAttribute("aria-label", `Retained dice: ${retained.join(", ")}`);
 
       const sixCount = document.createElement("span");
       sixCount.className = "six-count";
@@ -250,23 +257,25 @@
       attemptDetails.className = "attempt-details";
       const total = document.createElement("p");
       total.className = "attempt-total";
-      total.textContent = `Total: ${kept.reduce((sum, roll) => sum + roll, 0)}`;
-      const groupTitle = document.createElement("p");
-      groupTitle.className = "group-title";
-      groupTitle.textContent = "All roll groups";
-      const rollLog = document.createElement("ol");
-      rollLog.append(...groups.map((rolls, index) => {
-        const item = document.createElement("li");
-        const highest = Math.max(...rolls);
-        item.append(`Group ${index + 1}: [${rolls.join(", ")}] → `);
-        const keptLabel = document.createElement("span");
-        keptLabel.className = "kept";
-        keptLabel.textContent = `kept ${highest}`;
-        item.append(keptLabel);
-        return item;
-      }));
+      total.textContent = numberOfSixes === 7 ? "Winner: exactly seven retained dice are 6s." : "Not a winner: requires exactly seven retained 6s.";
 
-      attemptDetails.append(total, groupTitle, rollLog);
+      function detailLine(label, values) {
+        const line = document.createElement("p");
+        line.className = "roll-detail";
+        const detailLabel = document.createElement("span");
+        detailLabel.className = "detail-label";
+        detailLabel.textContent = `${label}: `;
+        line.append(detailLabel, values.length ? values.join(", ") : "None");
+        return line;
+      }
+
+      attemptDetails.append(
+        total,
+        detailLine("Complete roll", completeRoll),
+        detailLine("Ignored lowest dice", ignored),
+        detailLine("Retained dice", retained),
+        detailLine("Six count", [numberOfSixes])
+      );
       attempt.append(summary, attemptDetails);
       attempts.append(attempt);
 

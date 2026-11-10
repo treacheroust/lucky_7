@@ -144,7 +144,7 @@
 
     <section class="summary" aria-label="Best odds and heatmap legend">
       <span id="bestSummary" class="best-summary"></span>
-      <span class="formula">Rows: bobbleheads · Columns: dice per group</span>
+      <span class="formula">Rows: Bobbleheads · Columns: Barbarian Classes</span>
       <span class="legend"><span>Lower</span><span class="legend-bar"></span><span>Higher</span></span>
     </section>
 
@@ -159,8 +159,8 @@
   <script>
     const MIN_BOBBLEHEADS = 7;
     const MAX_BOBBLEHEADS = 50;
-    const MIN_GROUP_SIZE = 1;
-    const MAX_GROUP_SIZE = 20;
+    const MIN_CLASSES = 0;
+    const MAX_CLASSES = 20;
     const TARGET_SIXES = 7;
 
     function combinations(n, k) {
@@ -171,22 +171,32 @@
       return result;
     }
 
-    function winningProbability(bobbleheads, groupSize) {
-      const sixChance = 1 - (5 / 6) ** groupSize;
-      return combinations(bobbleheads, TARGET_SIXES)
-        * sixChance ** TARGET_SIXES
-        * (1 - sixChance) ** (bobbleheads - TARGET_SIXES);
+    function probabilityOfExactly(n, k) {
+      return combinations(n, k) * (1 / 6) ** k * (5 / 6) ** (n - k);
+    }
+
+    function winningProbability(bobbleheads, classes) {
+      const dice = bobbleheads + classes;
+      if (bobbleheads > TARGET_SIXES) {
+        return probabilityOfExactly(dice, TARGET_SIXES);
+      }
+
+      let probability = 0;
+      for (let sixes = TARGET_SIXES; sixes <= dice; sixes += 1) {
+        probability += probabilityOfExactly(dice, sixes);
+      }
+      return probability;
     }
 
     const cells = [];
-    let best = { probability: -1, bobbleheads: 0, groupSize: 0 };
+    let best = { probability: -1, bobbleheads: 0, classes: 0 };
 
     for (let bobbleheads = MIN_BOBBLEHEADS; bobbleheads <= MAX_BOBBLEHEADS; bobbleheads += 1) {
-      for (let groupSize = MIN_GROUP_SIZE; groupSize <= MAX_GROUP_SIZE; groupSize += 1) {
-        const probability = winningProbability(bobbleheads, groupSize);
-        cells.push({ bobbleheads, groupSize, probability });
+      for (let classes = MIN_CLASSES; classes <= MAX_CLASSES; classes += 1) {
+        const probability = winningProbability(bobbleheads, classes);
+        cells.push({ bobbleheads, classes, probability });
         if (probability > best.probability) {
-          best = { probability, bobbleheads, groupSize };
+          best = { probability, bobbleheads, classes };
         }
       }
     }
@@ -196,13 +206,14 @@
     const corner = document.createElement("th");
     corner.className = "corner";
     corner.scope = "col";
-    corner.innerHTML = "Bobbleheads ↓<br>Group size →";
+    corner.innerHTML = "Bobbleheads ↓<br>Classes →";
     headerRow.append(corner);
 
-    for (let groupSize = MIN_GROUP_SIZE; groupSize <= MAX_GROUP_SIZE; groupSize += 1) {
+    for (let classes = MIN_CLASSES; classes <= MAX_CLASSES; classes += 1) {
       const header = document.createElement("th");
       header.scope = "col";
-      header.textContent = groupSize;
+      header.textContent = classes;
+      header.title = `${classes} Barbarian ${classes === 1 ? "Class" : "Classes"}`;
       headerRow.append(header);
     }
     table.tHead.append(headerRow);
@@ -214,8 +225,8 @@
       rowHeader.textContent = bobbleheads;
       row.append(rowHeader);
 
-      for (let groupSize = MIN_GROUP_SIZE; groupSize <= MAX_GROUP_SIZE; groupSize += 1) {
-        const entry = cells.find((cell) => cell.bobbleheads === bobbleheads && cell.groupSize === groupSize);
+      for (let classes = MIN_CLASSES; classes <= MAX_CLASSES; classes += 1) {
+        const entry = cells.find((cell) => cell.bobbleheads === bobbleheads && cell.classes === classes);
         const percent = entry.probability * 100;
         const intensity = entry.probability / best.probability;
         const hue = 210 - 165 * intensity;
@@ -224,9 +235,9 @@
         cell.textContent = `${percent.toFixed(2)}%`;
         cell.style.backgroundColor = `hsl(${hue} 70% ${lightness}%)`;
         cell.style.color = intensity > 0.62 ? "#1c1917" : "#f8fafc";
-        cell.title = `${bobbleheads} bobbleheads, group size ${groupSize}: ${percent.toFixed(6)}%`;
+        cell.title = `${bobbleheads} Bobbleheads, ${classes} Barbarian ${classes === 1 ? "Class" : "Classes"}: ${percent.toFixed(6)}%`;
 
-        if (bobbleheads === best.bobbleheads && groupSize === best.groupSize) {
+        if (bobbleheads === best.bobbleheads && classes === best.classes) {
           cell.className = "best";
           const tag = document.createElement("span");
           tag.className = "best-tag";
@@ -239,7 +250,7 @@
     }
 
     document.querySelector("#bestSummary").textContent =
-      `Best: ${best.bobbleheads} bobbleheads × ${best.groupSize} dice = ${(best.probability * 100).toFixed(2)}%`;
+      `Best: ${best.bobbleheads} Bobbleheads + ${best.classes} Barbarian ${best.classes === 1 ? "Class" : "Classes"} = ${(best.probability * 100).toFixed(2)}%`;
   </script>
 </body>
 </html>

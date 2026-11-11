@@ -60,6 +60,17 @@
       touch-action: manipulation;
     }
     button:active { transform: translateY(1px); background: #fbbf24; }
+    .actions {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 10px;
+    }
+    .clear-button {
+      border: 1px solid #475569;
+      background: #1e293b;
+      color: #e2e8f0;
+    }
+    .clear-button:active { background: #334155; }
     #results { margin-top: 22px; }
     #results h2 { margin: 0 0 10px; font-size: 1.1rem; color: #cbd5e1; }
     .attempt-table {
@@ -84,7 +95,6 @@
       letter-spacing: .06em;
       text-transform: uppercase;
     }
-    .attempt-header span:last-child { grid-column: 5 / 7; }
     .attempt + .attempt { border-top: 1px solid #334155; }
     .attempt summary {
       position: relative;
@@ -105,11 +115,26 @@
       line-height: 1.45;
       overflow-wrap: normal;
     }
-    .six-count,
-    .treasure-count {
+    .six-count {
       color: #e2e8f0;
       font-size: .95rem;
       font-weight: 800;
+      text-align: center;
+    }
+    .treasure-count {
+      display: inline-grid;
+      place-items: center;
+      justify-self: center;
+      width: 28px;
+      height: 28px;
+      border: 2px solid #fde68a;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 30%, #fde68a, #f59e0b 68%, #b45309);
+      box-shadow: inset 0 0 0 2px rgb(146 64 14 / 35%), 0 1px 3px rgb(0 0 0 / 35%);
+      color: #451a03;
+      font-size: .82rem;
+      font-weight: 900;
+      line-height: 1;
       text-align: center;
     }
     .win {
@@ -141,11 +166,11 @@
       main { padding: 18px; }
       .inputs { grid-template-columns: 1fr; }
       .attempt-header,
-      .attempt summary { grid-template-columns: 24px minmax(44px, 1fr) 28px 52px auto 12px; gap: 5px; }
+      .attempt summary { grid-template-columns: 24px minmax(40px, 1fr) 34px 56px auto 12px; gap: 5px; }
       .attempt-header { padding-inline: 9px; font-size: .62rem; }
       .attempt summary { padding-inline: 9px; }
-      .six-count,
-      .treasure-count { font-size: .78rem; }
+      .six-count { font-size: .78rem; }
+      .treasure-count { width: 24px; height: 24px; font-size: .72rem; }
       .win { padding-inline: 7px; font-size: .65rem; }
     }
   </style>
@@ -167,7 +192,10 @@
           <input id="classes" name="classes" type="number" min="0" max="1000" value="1" required inputmode="numeric">
         </label>
       </div>
-      <button type="submit">Roll dice</button>
+      <div class="actions">
+        <button type="submit">Roll dice</button>
+        <button id="clearAttempts" class="clear-button" type="button">Clear</button>
+      </div>
     </form>
 
     <section id="results" aria-live="polite" hidden>
@@ -178,7 +206,6 @@
           <span>Retained dice</span>
           <span>Sixes</span>
           <span>Treasures</span>
-          <span>Result</span>
         </div>
         <div id="attempts"></div>
       </div>
@@ -190,6 +217,7 @@
     const results = document.querySelector("#results");
     const attempts = document.querySelector("#attempts");
     const helper = document.querySelector("#rollHelper");
+    const clearAttempts = document.querySelector("#clearAttempts");
     let attemptNumber = 0;
 
     function rollD6() {
@@ -211,6 +239,12 @@
 
     form.addEventListener("input", updateHelper);
     updateHelper();
+
+    clearAttempts.addEventListener("click", () => {
+      attempts.replaceChildren();
+      results.hidden = true;
+      attemptNumber = 0;
+    });
 
     form.addEventListener("submit", (event) => {
       event.preventDefault();

@@ -71,7 +71,7 @@
     .attempt-header,
     .attempt summary {
       display: grid;
-      grid-template-columns: 34px minmax(0, 1fr) 42px auto 14px;
+      grid-template-columns: 34px minmax(0, 1fr) 42px 58px auto 14px;
       gap: 8px;
       align-items: center;
     }
@@ -84,7 +84,7 @@
       letter-spacing: .06em;
       text-transform: uppercase;
     }
-    .attempt-header span:last-child { grid-column: 4 / 6; }
+    .attempt-header span:last-child { grid-column: 5 / 7; }
     .attempt + .attempt { border-top: 1px solid #334155; }
     .attempt summary {
       position: relative;
@@ -105,7 +105,8 @@
       line-height: 1.45;
       overflow-wrap: normal;
     }
-    .six-count {
+    .six-count,
+    .treasure-count {
       color: #e2e8f0;
       font-size: .95rem;
       font-weight: 800;
@@ -140,10 +141,11 @@
       main { padding: 18px; }
       .inputs { grid-template-columns: 1fr; }
       .attempt-header,
-      .attempt summary { grid-template-columns: 24px minmax(64px, 1fr) 30px auto 12px; gap: 6px; }
+      .attempt summary { grid-template-columns: 24px minmax(44px, 1fr) 28px 52px auto 12px; gap: 5px; }
       .attempt-header { padding-inline: 9px; font-size: .62rem; }
       .attempt summary { padding-inline: 9px; }
-      .six-count { font-size: .78rem; }
+      .six-count,
+      .treasure-count { font-size: .78rem; }
       .win { padding-inline: 7px; font-size: .65rem; }
     }
   </style>
@@ -175,6 +177,7 @@
           <span>Try</span>
           <span>Retained dice</span>
           <span>Sixes</span>
+          <span>Treasures</span>
           <span>Result</span>
         </div>
         <div id="attempts"></div>
@@ -221,6 +224,7 @@
       const retained = sortedRoll.slice(classes);
 
       const numberOfSixes = retained.filter((roll) => roll === 6).length;
+      const numberOfTreasures = retained.filter((roll) => roll % 2 === 0).length;
       attemptNumber += 1;
 
       const attempt = document.createElement("details");
@@ -241,6 +245,11 @@
       sixCount.textContent = numberOfSixes;
       sixCount.setAttribute("aria-label", `${numberOfSixes} ${numberOfSixes === 1 ? "six" : "sixes"}`);
 
+      const treasureCount = document.createElement("span");
+      treasureCount.className = "treasure-count";
+      treasureCount.textContent = numberOfTreasures;
+      treasureCount.setAttribute("aria-label", `${numberOfTreasures} ${numberOfTreasures === 1 ? "Treasure" : "Treasures"}`);
+
       const result = document.createElement("span");
       if (numberOfSixes === 7) {
         result.className = "win";
@@ -251,13 +260,17 @@
       chevron.className = "chevron";
       chevron.textContent = "▶";
       chevron.setAttribute("aria-hidden", "true");
-      summary.append(attemptLabel, diceRow, sixCount, result, chevron);
+      summary.append(attemptLabel, diceRow, sixCount, treasureCount, result, chevron);
 
       const attemptDetails = document.createElement("div");
       attemptDetails.className = "attempt-details";
       const total = document.createElement("p");
       total.className = "attempt-total";
       total.textContent = numberOfSixes === 7 ? "Winner: exactly seven retained dice are 6s." : "Not a winner: requires exactly seven retained 6s.";
+
+      const treasureTotal = document.createElement("p");
+      treasureTotal.className = "attempt-total";
+      treasureTotal.textContent = `Create ${numberOfTreasures} tapped ${numberOfTreasures === 1 ? "Treasure" : "Treasures"}.`;
 
       function detailLine(label, values) {
         const line = document.createElement("p");
@@ -271,6 +284,7 @@
 
       attemptDetails.append(
         total,
+        treasureTotal,
         detailLine("Complete roll", completeRoll),
         detailLine("Ignored lowest dice", ignored),
         detailLine("Retained dice", retained),
